@@ -1,0 +1,36 @@
+# -*- coding: utf-8 -*-
+"""
+  tts_engine.py — Edge TTS + أصوات اللغات
+
+  يُصدِّر محرك تحويل النص إلى صوت وقائمة الأصوات.
+  """
+
+import sys as _sys_legacy
+import os
+# ─── استيراد كل المتغيرات العالمية من bot_legacy ───
+from bot_legacy import *
+import state as gl  # noqa: F401,F403
+
+# FIX 2026-10-12: edge_tts غير مثبت على التلفون - استيراد امن
+try:
+    import edge_tts
+except ImportError:
+    edge_tts = None
+
+def _tts_generate(text, voice, out_path):
+    """توليد ملف صوتي باستخدام edge-tts (مزامن)"""
+    if edge_tts is None:
+        return False, "edge_tts not installed"
+    async def _run():
+        communicate = edge_tts.Communicate(text, voice)
+        await communicate.save(out_path)
+    # دائماً نُنشئ event loop جديد — آمن في البيئات متعددة الخيوط
+    loop = asyncio.new_event_loop()
+    try:
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(_run())
+        return True, None
+    except Exception as e:
+        return False, str(e)
+    finally:
+        loop.close()
